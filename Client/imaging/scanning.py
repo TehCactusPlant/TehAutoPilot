@@ -1,13 +1,11 @@
 import cv2, logging
-
+import Client.common_utils.cv_drawing as drawing_utils 
 from Client.data.bank import DataBank
-from Client.models.image_process import HSVImageProcess
-from Client.models.matching import ContourReference
+from Client.common_utils.models import Event, PairedList, Point
 
 logger = logging.getLogger(__name__)
 
-from Client.cact_utils import opencv_utils
-from Client.models.core import BBox, Point, Reference
+from Client.models.core import BBox, Reference
 
 tracker_types = ['BOOSTING', 'MIL', 'KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
 img_match_method = cv2.TM_SQDIFF_NORMED
@@ -28,12 +26,15 @@ class ImageScanner:
         if self.initialized:
             return
         self.initialized = True
-        self.trackers: list[Tracker] = []
+        self.trackers: PairedList[Tracker] = PairedList()
         self.current_index = 0
         self.current_num_trackers = 0
         self._trackers_to_add = []
         self._trackers_to_remove = []
         self.data_bank = DataBank()
+
+        # Events
+        self.on_trackers_updated = Event()
 
     def rolling_scan(self):
         for tracker in self.trackers:
@@ -55,28 +56,41 @@ class ImageScanner:
     def remove_tracker(self, tracker):
         self._trackers_to_remove.append(tracker)
 
-    def _safely_update_trackers(self):
-        for tracker in self._trackers_to_add:
-            self.current_num_trackers += 1
-            self.trackers.append(tracker)
-            logger.debug(f"Adding Tracker {tracker.name} to trackers")
+    def get_scanner_by_name(self, name):
+        for tracker in self.trackers:
+            if tracker.name == name:
+                return tracker
+        return None
 
+    def _safely_update_trackers(self):
+        change = False
         for tracker in self._trackers_to_remove:
+            change = True
             self.current_num_trackers -= 1
             if tracker in self.trackers:
                 self.trackers.remove(tracker)
-            logger.debug(f"Removing Tracker {tracker.name} from trackers")
+                logger.debug(f"Removing Tracker {tracker.name} from trackers")
+
+        for tracker in self._trackers_to_add:
+            change = True
+            self.current_num_trackers += 1
+            self.trackers.append(tracker)
+            logger.debug(f"Adding Tracker {tracker.name} to trackers")
+            logger.debug(f"Adding ImageProcess to processor")
+            from Client.imaging.processing import ImageProcessor
+            ImageProcessor().add_image_process(tracker.image_reference.image_process)
 
         self._trackers_to_add = []
         self._trackers_to_remove = []
         self.data_bank.update_debug_entry("# Trackers", str(len(self.trackers)))
-
+        if change:
+            self.on_trackers_updated()
 
 class Tracker:
     sub_region = None
 
-    def __init__(self, image_reference: Reference, name=""):
-        self.name = name
+    def __init__(self, image_reference: Reference):
+        self.name = image_reference.name
         self.box_points = ()
         self.last_position: Point = None
         self.bbox = None
@@ -109,13 +123,14 @@ class Tracker:
 
     def draw_match(self, output_image):
         if self.image_reference.reference_type.name == 'hsv contour':
-            opencv_utils.draw_contour_parameter(output_image, self.match)
-            opencv_utils.draw_contour_points(output_image, self.match)
+            drawing_utils.draw_contour_parameter(output_image, self.match)
+            drawing_utils.draw_contour_points(output_image, self.match)
 
     def set_scan_bbox(self) -> bool:
+        return False
         if self.last_position is None:
             return False
-        print("scan bboxing")
+        # logger.debug("scan bboxing")
 
         if self.image_reference.reference_type.name == 'hsv contour':
             rect = cv2.minAreaRect()
@@ -161,6 +176,6 @@ class Tracker:
                 else:
                     n_bbox.width = n_bbox.width - section_offset
             self.scan_bbox = n_bbox
-            # print(f"scan_bbox: {self.scan_bbox}")
+            # logger.debug(f"scan_bbox: {self.scan_bbox}")
             return True
         return False

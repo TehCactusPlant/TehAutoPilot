@@ -1,10 +1,10 @@
 import collections
-import time
 from abc import abstractmethod
 
 import cv2
 import numpy
 
+from Client.common_utils.models import Point
 from Client.models.core_impl import *
 
 ROOT_DB = ""
@@ -12,27 +12,10 @@ ROOT_DB = ""
 NodeLink = collections.namedtuple('NodeLink', ('node1', 'node2'))
 
 
-class Point:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-        self.xy = (x, y)
-
-    @staticmethod
-    def from_tuple(tup):
-        return Point(tup[0], tup[1])
-
-    def distance(self, p2, precise=False):
-        dst = numpy.sqrt(numpy.power((p2.x - self.x), 2) + numpy.power((p2.y - self.y), 2))
-        if precise:
-            return dst
-        else:
-            return int(dst)
-
-
 class ContourPoints:
     def __init__(self, cnt, name=""):
         self.MAX_DISTANCE = 40
+        self.MAX_PIXEL_DISTANCE = 15
         M = cv2.moments(cnt)
         try:
             cX = int(M["m10"] / M["m00"])
@@ -53,47 +36,35 @@ class ContourPoints:
         self.right_distance = self.right.distance(self.center)
 
     def in_range(self, target_cnt):
-        if numpy.abs(self.top_distance - target_cnt.top_distance) > self.MAX_DISTANCE:
+        if numpy.abs(self.top_distance - target_cnt.top_distance) > self.MAX_DISTANCE or \
+                numpy.abs(numpy.abs(target_cnt.top.y - target_cnt.center.y) - numpy.abs(self.top.y - self.center.y)) \
+                >= self.MAX_PIXEL_DISTANCE:
             return False
-        if numpy.abs(self.bottom_distance - target_cnt.bottom_distance) > self.MAX_DISTANCE:
+        if numpy.abs(self.bottom_distance - target_cnt.bottom_distance) > self.MAX_DISTANCE or \
+                numpy.abs(numpy.abs(target_cnt.bottom.y - target_cnt.center.y) - numpy.abs(self.bottom.y - self.center.y)) \
+                >= self.MAX_PIXEL_DISTANCE:
             return False
-        if numpy.abs(self.left_distance - target_cnt.left_distance) > self.MAX_DISTANCE:
+        if numpy.abs(self.left_distance - target_cnt.left_distance) > self.MAX_DISTANCE or \
+                numpy.abs(numpy.abs(target_cnt.center.x - target_cnt.left.x) - numpy.abs(self.center.x - self.left.x)) \
+                >= self.MAX_PIXEL_DISTANCE:
             return False
-        if numpy.abs(self.right_distance - target_cnt.right_distance) > self.MAX_DISTANCE:
+        if numpy.abs(self.right_distance - target_cnt.right_distance) > self.MAX_DISTANCE or \
+                numpy.abs(numpy.abs(target_cnt.center.x - target_cnt.right.x) - numpy.abs(self.center.x - self.right.x)) \
+                >= self.MAX_PIXEL_DISTANCE:
             return False
         return True
 
 
-class FPSCounter:
-    def __init__(self):
-        self.time1 = 0
-        self.time2 = 1
-        self.times = []
-        self.avg_fps = 1
-        self.last_fps = 1
-
-    def get_fps(self):
-        self.time2 = time.time()
-        if self.time2 == self.time1:
-            self.time1 -= .01
-        self.last_fps = int(1.0 / (self.time2 - self.time1))
-        self.times.append(self.last_fps)
-        if len(self.times) > 60:
-            self.times.pop(0)
-        self.avg_fps = int(numpy.mean(self.times))
-        self.time1 = self.time2
-
-
 class BBox(BBoxImpl):
     def __init__(self, _id, x=None, y=None, width=None, height=None):
-        super().__init__(_id, x, y ,width, height)
+        super().__init__(_id, x, y, width, height)
 
     def bbox(self):
         return (self.x, self.y, self.width, self.height)
 
     @staticmethod
     def from_tuple(tup):
-        print(tup)
+        # logger.debug(tup)
         return BBox(None, tup[0], tup[1], tup[2], tup[3])
 
 
@@ -175,10 +146,12 @@ class Node(NodeImpl):
 
 class ImageProcess(ImageProcessImpl):
     def __init__(self, _id, name=None, args=None):
+        logger.debug(f"Initializing new ImageProcess")
         super().__init__(_id)
         self.process_type = None
         self.images = {}
         if self.get_id() is None:
+            logger.debug(f"No ID found for new ImageProcess. given name = {name} Is this a new Process?")
             self.name = name
             self.args = args
         else:
@@ -186,6 +159,7 @@ class ImageProcess(ImageProcessImpl):
             if len(resp) > 0:
                 self.name = resp[0]["name"]
                 self.args = ArgEntry(resp[0]["arg_entry"])
+                logger.debug(f"Created im_proc {self.name}. ID: {self.get_id()}")
 
     def process_image(self, **kwargs):
         logger.warning(f"process image not implemented but being called for {self.name}")
@@ -210,7 +184,8 @@ class ReferenceType(ReferenceTypeImpl):
 
 
 class Reference(ReferenceImpl):
-    def __init__(self, _id, bbox=None, args=None, reference_type=None, image_process=None, name=None):
+    def __init__(self, _id, bbox=None, args=None, reference_type=None,
+                 image_process=None, reference_data=None, name=None):
         super().__init__(_id)
         self.minBox = None
         if self.get_id() is not None:
@@ -218,12 +193,21 @@ class Reference(ReferenceImpl):
             self.bbox: BBox = BBox(data[0]["bbox"]) if data[0]["bbox"] is not None else bbox
             self.args: ArgEntry = ArgEntry(data[0]["arg_entry"])
             self.reference_type: ReferenceType = ReferenceType(data[0]["reference_type"])
-            self.image_process: ImageProcess = ImageProcess(data[0]["image_process"])
+            if self.reference_type.name == "hsv contour":
+                from Client.models.image_process import HSVImageProcess
+                logger.debug(f"im_proc ID for create in ReferenceImpl({self.get_id()}): {data[0]['image_process']}")
+                self.image_process: ImageProcess = HSVImageProcess(data[0]["image_process"])
+            else:
+                logger.error(f"Reference type: {self.reference_type.name} DOES NOT EXIST in Reference init switch")
+
+            self.name = data[0]["name"]
         else:
             self.bbox: BBox = bbox
             self.args: ArgEntry = args
             self.reference_type: ReferenceType = reference_type
             self.image_process: ImageProcess = image_process
+            self.reference_data = reference_data
+            self.name = name
 
     @abstractmethod
     def find_match(self, ref_object):

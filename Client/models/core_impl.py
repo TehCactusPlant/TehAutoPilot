@@ -203,20 +203,47 @@ class ReferenceImpl(DBModel):
         self.bbox = None
         self.args = None
         self.reference_type = None
+        self.reference_data = None
+        self.name = None
 
     def delete(self):
         pass
 
     def save(self):
-        # Save preqs
+        # Save pre-reqs
         if self.reference_type is not None:
             self.reference_type.save()
+        if self.image_process is not None:
+            self.image_process.save()
+        # Save object
         statement = f"INSERT OR REPLACE INTO {self.table_name} " \
-                    + f"(_id, reference_type, arg_entry, bbox) VALUES(?,?,?,?) RETURNING *"
+                    + f"(_id, reference_type, arg_entry, bbox, name, image_process) VALUES(?,?,?,?,?,?) RETURNING *"
         bbox_id = self.bbox.get_id() if self.bbox is not None else None
-        args = (self.get_id(), self.reference_type.get_id(), self.args.get_id(), bbox_id)
+        arg_id = self.args.get_id() if self.args is not None else None
+        args = (self.get_id(), self.reference_type.get_id(), arg_id, bbox_id, self.name, self.image_process.get_id())
         resp = core_db.execute_query(self.db_host, statement, args)
         self.new_id_from_db(resp)
+        self.save_numpy(f"{self.get_id()}_{self.name}", self.reference_data)
+
+    @staticmethod
+    def get_all() -> dict:
+        statement = f"SELECT * FROM reference"
+        data = core_db.execute_query(ROOT_DB, statement)
+        resp = {}
+        types = core_db.execute_query(ROOT_DB, "SELECT * FROM reference_type")
+        for entry in data:
+            r_type = None
+            for row in types:
+                if row["_id"] == entry["reference_type"]:
+                    r_type = row["reference_type_name"]
+                    break
+            if r_type == "hsv contour":
+                from Client.models.matching import ContourReference
+                resp[entry["name"]] = ContourReference(entry["_id"])
+            else:
+                from Client.models.core import Reference
+                resp[entry["name"]] = Reference(entry["_id"])
+        return resp
 
     def get(self):
         statement = f"SELECT * FROM {self.table_name} WHERE _id = {self.get_id()}"
@@ -244,11 +271,12 @@ class ImageProcessImpl(DBModel):
         return core_db.execute_query(self.db_host, statement)
 
     @staticmethod
-    def get_all():
+    def get_all() -> dict:
         statement = f"SELECT * FROM image_process"
         data = core_db.execute_query(ROOT_DB, statement)
         resp = {}
         for entry in data:
             from Client.models.core import ImageProcess
-            resp[entry["name"]] = ImageProcess(entry["_id"])
+            im_proc = ImageProcess(entry["_id"])
+            resp[im_proc.name] = im_proc
         return resp

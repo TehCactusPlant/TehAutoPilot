@@ -1,6 +1,10 @@
+import os
 import sqlite3 as db
 from abc import abstractmethod, ABC
 import logging
+
+import numpy
+
 logger = logging.getLogger(__name__)
 
 
@@ -96,6 +100,7 @@ class DBModel(ABC):
         self.db_host = db_name
         self.table_name = table_name
         self.secondary_table = None
+        self.file_folder = ""
 
     def get_id(self):
         return self._id
@@ -118,7 +123,23 @@ class DBModel(ABC):
     def new_id_from_db(self, data):
         if self.get_id() is None and len(data) > 0:
             self.set_id(data[0]["_id"])
-            logger.debug(f"New ID registered for entity in {self.table_name}: {self.get_id()}")
+            logger.debug(f"New ID registered for entity {type(self)} in {self.table_name}: {self.get_id()}")
+
+    def save_numpy(self, f_name,array):
+        if self._id is not None:
+            dir = os.path.dirname(self.db_host) + f"\\{self.file_folder}"
+            logger.debug("Saving numpy array to " + f"{dir}\\{f_name}.npy")
+            numpy.save(f"{dir}\\{f_name}.npy", array)
+        else:
+            logger.error(f"Numpy array not saved. Entity of type({type(self)} has no _id)")
+
+    def load_numpy(self, f_name):
+        if self._id is not None:
+            dir = os.path.dirname(self.db_host) + f"\\{self.file_folder}"
+            logger.debug("Loading numpy array at " + f"{dir}\\{f_name}.npy")
+            return numpy.load(f"{dir}\\{f_name}.npy")
+        else:
+            logger.error(f"Numpy array not loaded. Entity of type({type(self)} has no _id)")
 
 
 def bool_to_int(b: bool):
@@ -149,10 +170,10 @@ def parse_values_by_keys(parse_list: list[dict], keys: list, none_override=None)
 def execute_query(db_file, statement, args=None):
     con, cur = _connect_db(db_file)
     if args is None:
-        logger.info(f"Executing Statement: {statement}:")
+        logger.debug(f"Executing Statement: {statement}:")
         sql_res = cur.execute(statement).fetchall()
     else:
-        logger.info(f"Executing Statement: {statement} with args {args}:")
+        logger.debug(f"Executing Statement: {statement} with args {args}:")
         sql_res = cur.execute(statement, args).fetchall()
     resp = []
     for row in sql_res:

@@ -1,6 +1,7 @@
+from Client.data.bank import DataBank
 from Client.database.core import DBInterface
 from Client.imaging.processing import ImageProcessor
-from Client.navigation.nodes import NodeNavigator
+from Client.navigation.nodes import NodeMapping
 from Client.tasks.steps.steps import Step
 from Client.tasks.task import Task
 import sqlite3 as db
@@ -28,7 +29,7 @@ class TaskAssembler:
 
 class TaskProcessor:
     def __init__(self, assembler: TaskAssembler,
-                 node_navigator: NodeNavigator,
+                 node_navigator: NodeMapping,
                  img_processor: ImageProcessor) -> None:
         self.current_area = ""
         self.current_task: Task = None
@@ -36,7 +37,7 @@ class TaskProcessor:
         self.node_navigator = node_navigator
         self.assembler = assembler
         self.img_processor = img_processor
-        self.data_bank = {}
+        self.data_bank = DataBank()
 
     def _add_task(self, task: Task):
         self.tasks.append(task)

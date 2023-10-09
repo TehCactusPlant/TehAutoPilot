@@ -1,7 +1,4 @@
-import math
-import threading
-import time
-from enum import Enum
+from Client.common_utils.constants import RBGColors
 from Client.models.core import *
 
 import cv2
@@ -19,31 +16,20 @@ fonts = {
 }
 
 
-class Colors:
-    RED = (0, 0, 255)
-    GREEN = (0, 255, 0)
-    BLUE = (255, 0, 0)
-    YELLOW = (0, 255, 244)
-    LIGHT_BLUE = (255, 140, 127)
-    DARK_BLUE = (154, 15, 0)
-    LIGHT_RED = (60, 60, 255)
-    DARK_RED = (0, 0, 122)
-
-
-def draw_line(image, pt1: Point, pt2: Point, color_override=Colors.BLUE):
+def draw_line(image, pt1: Point, pt2: Point, color_override=RBGColors.BLUE):
     font = fonts["default"]
-    color = (255, 0, 0)
-    cv2.line(image, pt1, pt2, color, font["thickness"], 4)
+    color = color_override
+    cv2.line(image, pt1.xy, pt2.xy, color, font["thickness"], 4)
 
 
-def draw_line_and_distance(image, pt1: Point, pt2: Point, color_override=Colors.BLUE):
+def draw_line_and_distance(image, pt1: Point, pt2: Point, color_override=RBGColors.BLUE):
     font = fonts["default"]
-    color = (255, 0, 0)
+    color = color_override
     middle_x = int(numpy.median([pt1.x, pt2.x]))
     middle_y = int(numpy.median([pt1.y, pt2.y]))
     dist = pt1.distance(pt2)
     cv2.line(image, pt1.xy, pt2.xy, color, font["thickness"], 4)
-    write_label(image, Point(middle_x, middle_y), f"{dist}", color_override=Colors.GREEN)
+    write_label(image, Point(middle_x, middle_y), f"{dist}", color_override=RBGColors.GREEN)
 
 
 def resize(image, scale: float):
@@ -51,7 +37,7 @@ def resize(image, scale: float):
     return cv.resize(image, (int(w * scale), int(h * scale)), interpolation=cv.INTER_AREA)
 
 
-def write_label(base_img, point: Point, text: str, color_override=Colors.GREEN):
+def write_label(base_img, point: Point, text: str, color_override=RBGColors.GREEN):
     font = fonts["default"]
     color = color_override
     return cv2.putText(base_img,
@@ -76,7 +62,7 @@ def draw_circle(base_img, point: Point, label="", radius=5):
                      )
 
 
-def highlight_match(base_img, bbox: BBox, label_name, color_override=Colors.GREEN):
+def highlight_match(base_img, bbox: BBox, label_name, color_override=RBGColors.GREEN):
     font = fonts["default"]
     font["color"] = color_override
     cv.rectangle(base_img, bbox.top_left,
@@ -85,20 +71,32 @@ def highlight_match(base_img, bbox: BBox, label_name, color_override=Colors.GREE
 
 
 def draw_contour_points(base_img, points: ContourPoints):
+    cv2.circle(base_img, points.center.xy, 8, RBGColors.YELLOW, -1)
+    """
     draw_line_and_distance(base_img,points.center, points.left)
     draw_line_and_distance(base_img,points.center, points.right)
     draw_line_and_distance(base_img,points.center, points.top)
     draw_line_and_distance(base_img,points.center, points.bottom)
-    cv2.circle(base_img, points.left.xy, 8, Colors.LIGHT_BLUE, -1)
-    cv2.circle(base_img, points.right.xy, 8, Colors.DARK_BLUE, -1)
-    cv2.circle(base_img, points.top.xy, 8, Colors.LIGHT_RED, -1)
-    cv2.circle(base_img, points.bottom.xy, 8, Colors.DARK_RED, -1)
-    cv2.circle(base_img, points.center.xy, 8, Colors.YELLOW, -1)
+    """
+    cv2.circle(base_img, points.left.xy, 8, RBGColors.LIGHT_BLUE, -1)
+    cv2.circle(base_img, points.right.xy, 8, RBGColors.DARK_BLUE, -1)
+    cv2.circle(base_img, points.top.xy, 8, RBGColors.LIGHT_RED, -1)
+    cv2.circle(base_img, points.bottom.xy, 8, RBGColors.DARK_RED, -1)
+
+    draw_line_and_distance(base_img,points.center, Point(points.center.x, points.top.y), color_override=RBGColors.GRAY)
+    draw_line_and_distance(base_img,points.center, Point(points.center.x, points.bottom.y), color_override=RBGColors.GRAY)
+    draw_line_and_distance(base_img,points.center, Point(points.left.x, points.center.y), color_override=RBGColors.GRAY)
+    draw_line_and_distance(base_img,points.center, Point(points.right.x, points.center.y), color_override=RBGColors.GRAY)
+    cv2.circle(base_img, (points.left.x, points.center.y), 4, RBGColors.GRAY, -1)
+    cv2.circle(base_img, (points.right.x, points.center.y), 4, RBGColors.GRAY, -1)
+    cv2.circle(base_img, (points.center.x, points.top.y), 4, RBGColors.GRAY, -1)
+    cv2.circle(base_img, (points.center.x, points.bottom.y), 4, RBGColors.GRAY, -1)
+
     write_label(base_img, points.top, points.name)
 
 
 def draw_contour_parameter(base_img, cnt: ContourPoints):
-    cv2.drawContours(base_img, [cnt.contours], 0, Colors.GREEN, 3)
+    cv2.drawContours(base_img, [cnt.contours], 0, RBGColors.GREEN, 3)
 
 
 def merge_images(im1, im2, merge_point: Point, im2_size: tuple):

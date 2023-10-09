@@ -22,6 +22,7 @@ ref_types = [
     "COMBAT"
 ]
 
+
 def create_reference_image(base_img, location: Location):
     logger.info("Starting thread for reference image capture")
     thread = threading.Thread(target=_create_reference_image, args=(base_img,))

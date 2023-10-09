@@ -62,8 +62,7 @@ class Searchable:
                         y_off: y_off + sector_size[1],
                         x_off: x_off + sector_size[0]
                         ]
-        # print(f"img: {image.shape} - tmp: {self.tmp.shape} x_off {x_off} - y_off {y_off}")
-        # Debug draw for scan
+        # logger.debug(f"img: {image.shape} - tmp: {self.tmp.shape} x_off {x_off} - y_off {y_off}")
         cv.rectangle(thresh,
                      (x_off, y_off),
                      (x_off + partial_image.shape[1],

@@ -2,8 +2,9 @@ import json
 import math
 
 import XInput as xi
+import keyboard as keyboard
+
 from . import input_packet
-import numpy as np
 
 # Implement hold feature
 # Fire and forget
@@ -36,7 +37,6 @@ class SwitchPacketAssembler:
         self.delay = delay
         self.unpresses = {}
         self.tps = 1.0 / delay
-        pass
 
     def time_to_ticks(self, seconds: float):
         return seconds * self.tps
@@ -49,6 +49,7 @@ class SwitchPacketAssembler:
 
     def assemble_state_automated(self):
         new_state = self.current_packet
+
         # Process unpress
         self.process_unpresses()
         return new_state
@@ -91,9 +92,59 @@ class SwitchPacketAssembler:
         self.current_packet = new_state
         return new_state
 
-    def automated_state(self):
+    def assemble_state_keyboard(self):
+        new_state = input_packet.create_input_packet()
 
-        return self.current_packet
+        # Remap
+        new_state["A"] = keyboard.is_pressed('6')
+        new_state["B"] = keyboard.is_pressed('5')
+        new_state["Y"] = keyboard.is_pressed('4')
+        new_state["X"] = keyboard.is_pressed('8')
+        new_state["PLUS"] = keyboard.is_pressed('enter')
+        new_state["MINUS"] = keyboard.is_pressed('0')
+        new_state["HOME"] = keyboard.is_pressed('end')
+        new_state["L"] = keyboard.is_pressed('q')
+        new_state["R"] = keyboard.is_pressed('e')
+        new_state["ZL"] = keyboard.is_pressed('7')
+        new_state["ZR"] = keyboard.is_pressed('9')
+
+        if keyboard.is_pressed('w'):
+            new_state["L_STICK"]["Y_VALUE"] = 100
+        elif keyboard.is_pressed('s'):
+            new_state["L_STICK"]["Y_VALUE"] = -100
+        else:
+            new_state["L_STICK"]["Y_VALUE"] = 0
+
+        if keyboard.is_pressed('a'):
+            new_state["L_STICK"]["X_VALUE"] = -100
+        elif keyboard.is_pressed('d'):
+            new_state["L_STICK"]["X_VALUE"] = 100
+        else:
+            new_state["L_STICK"]["X_VALUE"] = 0
+
+        if keyboard.is_pressed('up'):
+            new_state["R_STICK"]["Y_VALUE"] = 100
+        elif keyboard.is_pressed('down'):
+            new_state["R_STICK"]["Y_VALUE"] = -100
+        else:
+            new_state["R_STICK"]["Y_VALUE"] = 0
+
+        if keyboard.is_pressed('left'):
+            new_state["R_STICK"]["X_VALUE"] = -100
+        elif keyboard.is_pressed('right'):
+            new_state["R_STICK"]["X_VALUE"] = 100
+        else:
+            new_state["R_STICK"]["X_VALUE"] = 0
+        new_state["L_STICK"]["PRESSED"] = keyboard.is_pressed('1')
+        new_state["R_STICK"]["PRESSED"] = keyboard.is_pressed('3')
+
+        new_state["DPAD_UP"] = keyboard.is_pressed('i')
+        new_state["DPAD_LEFT"] = keyboard.is_pressed('j')
+        new_state["DPAD_RIGHT"] = keyboard.is_pressed('l')
+        new_state["DPAD_DOWN"] = keyboard.is_pressed('k')
+        self.current_packet = new_state
+        return new_state
+
     def alter_button_state(self, button, state):
         if button is SwitchButtons.RS or button is SwitchButtons.LS:
             self.current_packet[button]["PRESSED"] = state
@@ -107,5 +158,3 @@ class SwitchPacketAssembler:
     def press_button(self, button, duration_in_seconds: float):
         self.alter_button_state(button, True)
         self.unpresses[button] = self.time_to_ticks(duration_in_seconds)
-
-

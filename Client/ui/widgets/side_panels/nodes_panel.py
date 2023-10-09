@@ -1,23 +1,23 @@
 import tkinter
 
-from Client.navigation.nodes import NodeNavigator
+from Client.navigation.nodes import NodeMapping
 from Client.ui.widgets.side_panels.side_panel import SidePanel
 
 
 class NodesPanel(SidePanel):
-    def __init__(self, parent, bot):
-        super().__init__(parent, bot)
-        self.FRAME.rowconfigure(9, {'minsize': 10})
-        self.FRAME.columnconfigure(9, {'minsize': 5})
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.rowconfigure(9, {'minsize': 10})
+        self.columnconfigure(9, {'minsize': 5})
 
-        self.header = tkinter.Label(self.FRAME, text='Nodes')
+        self.header = tkinter.Label(self, text='Nodes')
         # Create Node
-        self.create_node_manual_btn = tkinter.Button(self.FRAME, text="Manual Node", width=10)
-        self.create_node_auto_btn = tkinter.Button(self.FRAME, text="Auto Node", width=10)
-        self.delete_node_btn = tkinter.Button(self.FRAME, text="Delete Node", width=10)
-        self.link_node_btn = tkinter.Button(self.FRAME, text="Link Node", width=10)
-        self.link_node_text_box = tkinter.Entry(self.FRAME)
-        self.delete_node_text_box = tkinter.Entry(self.FRAME)
+        self.create_node_manual_btn = tkinter.Button(self, text="Manual Node", width=10)
+        self.create_node_auto_btn = tkinter.Button(self, text="Auto Node", width=10)
+        self.delete_node_btn = tkinter.Button(self, text="Delete Node", width=10)
+        self.link_node_btn = tkinter.Button(self, text="Link Node", width=10)
+        self.link_node_text_box = tkinter.Entry(self)
+        self.delete_node_text_box = tkinter.Entry(self)
 
         # Delete Node
         # Link Node

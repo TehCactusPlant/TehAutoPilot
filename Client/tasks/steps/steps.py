@@ -6,7 +6,7 @@ from Client.data.bank import DataBank
 class Step(ABC):
     def __init__(self, data_bank: DataBank, args, condition, positive_step, negative_step):
         self.complete = False
-        self.data_bank: DataBank = data_bank
+        self.data_bank: DataBank = DataBank()
         self.condition: Step = condition
         self.positive_step: Step = positive_step
         self.negative_step: Step = negative_step

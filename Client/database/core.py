@@ -1,19 +1,17 @@
-import os, logging
+import os
 
 import coloredlogs
 
 from Client.database.models import *
 from Client.models.core import *
 
-logging.basicConfig()
-logging.root.setLevel(logging.DEBUG)
 logger = logging.getLogger(__name__)
-coloredlogs.install(level="DEBUG", logger=logger)
 
 
 class DBInterface:
     DB_PATH = "C:\\Users\\Cactus\\Documents\\pkmnbdsp\\core.db"
     IMAGES_PATH = "C:\\Users\\Cactus\\Documents\\pkmnbdsp\\images"
+    CONTOURS_PATH = "C:\\Users\\Cactus\\Documents\\pkmnbdsp\\contours"
 
     def create_tables(self):
         # Standalone Entities
@@ -91,6 +89,7 @@ class DBInterface:
 
         tables.append(Table("reference", [
             Column("_id", ColumnType.INTEGER, primary_key=True),
+            Column("name", ColumnType.TEXT, is_unique=True),
             Column("reference_type", ColumnType.INTEGER,
                    foreign_key=ForeignKey("reference_type", "_id")),
             Column("arg_entry", ColumnType.INTEGER,
@@ -98,7 +97,7 @@ class DBInterface:
             Column("bbox", ColumnType.INTEGER,
                    foreign_key=ForeignKey("bbox", "_id")),
             Column('image_process', ColumnType.INTEGER,
-                   foreign_key=ForeignKey("image_process", "_id"))
+                   foreign_key=ForeignKey("image_process", "_id")),
         ]))
 
         tables.append(Table("node", [
@@ -115,7 +114,8 @@ class DBInterface:
             Column("node1", ColumnType.INTEGER, co_unique=True,
                    foreign_key=ForeignKey("node", "_id")),
             Column("node2", ColumnType.INTEGER, co_unique=True,
-                   foreign_key=ForeignKey("node", "_id"))
+                   foreign_key=ForeignKey("node", "_id")),
+            Column("distance", ColumnType.INTEGER)
         ]))
 
         tables.append(Table("task_step_link", [
@@ -128,6 +128,11 @@ class DBInterface:
 
         for table in tables:
             table.create_table(self.DB_PATH)
+
+        # Create File paths
+        os.mkdir(self.CONTOURS_PATH)
+        os.mkdir(self.IMAGES_PATH)
+
 
     def open_connection(self):
         con = db.connect(self.DB_PATH)
@@ -179,6 +184,9 @@ def object_tests():
 
 
 if __name__ == "__main__":
+    logging.basicConfig()
+    logging.root.setLevel(logging.DEBUG)
+    coloredlogs.install(level="DEBUG", logger=logger)
     WIPE = True
     logger.info("Starting databasing")
     db_base_con = DBInterface()
@@ -186,7 +194,9 @@ if __name__ == "__main__":
         logger.info("Deleting Database and restoring")
         try:
             os.remove(db_base_con.DB_PATH)
+            os.removedirs(db_base_con.CONTOURS_PATH)
+            os.removedirs(db_base_con.IMAGES_PATH)
         except Exception as e:
-            pass
+            logger.error(e)
         db_base_con.create_tables()
         object_tests()

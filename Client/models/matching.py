@@ -1,29 +1,35 @@
 import cv2
 
-from Client.cact_utils import opencv_utils
-from Client.models.core import Reference, ContourPoints, Point, BBox
+from Client.common_utils import cv_drawing
+from Client.models.core import Reference, ContourPoints, BBox
+from Client.common_utils.models import Point
 
 
 class ContourReference(Reference):
 
-    def __init__(self, _id, bbox=None, args=None, reference_type=None, image_process=None, c_points=None):
-        super().__init__(_id, bbox, args, reference_type, image_process)
-        if args is not None:
-            self.contour_points = ContourPoints(args["contour_points"], self.image_process.name)
-        else:
-            self.contour_points = ContourPoints(c_points, self.image_process.name)
-        self.THRESH = .15
+    def __init__(self, _id, bbox=None, args=None, reference_type=None,
+                 image_process=None, reference_data = None, name = None):
+        super().__init__(_id, bbox, args, reference_type, image_process, reference_data, name)
+        self.file_folder = "contours"
+        if self.name is None:
+            self.name = f"ip-{self.image_process.name}"
+        if self.get_id() is not None:
+            self.reference_data = self.load_numpy(f"{self.get_id()}_{self.name}")
+        self.contour_points = ContourPoints(self.reference_data, self.name)
+        self.THRESH = .10
         self.match_method = cv2.CONTOURS_MATCH_I1
         self.match = None
 
     def find_match(self, contour_to_search):
         if self.contour_points is None:
             return None, 99
+        if contour_to_search is None:
+            return None, 99
         max_match = 1
         matches = []
         pos = Point(0, 0)
         for contours in contour_to_search:
-            cnt_point_dynamic = ContourPoints(contours, self.image_process.name)
+            cnt_point_dynamic = ContourPoints(contours, self.name)
             if self.contour_points.in_range(cnt_point_dynamic):
                 ret = cv2.matchShapes(self.contour_points.contours, cnt_point_dynamic.contours, self.match_method, 0.0)
                 if ret <= self.THRESH and ret <= max_match:

@@ -2,12 +2,14 @@ import logging
 import time
 
 import cv2, numpy
-import Client.cact_utils.opencv_utils as cv_utils
+import Client.common_utils.cv_drawing as cv_utils
 from Client.data.bank import DataBank
 
-from Client.models.core import ImageProcess, ContourPoints, FPSCounter
+from Client.models.core import ImageProcess, ContourPoints, ArgEntry, Arg
+from Client.common_utils.models import FPSCounter
 
 logger = logging.getLogger(__name__)
+
 
 class OutputImageProcess(ImageProcess):
     def __init__(self, _id, name=None, args=None):
@@ -89,17 +91,20 @@ class HSVImageProcess(ImageProcess):
         self.data_bank = DataBank()
         self.image_contours = None
         self.show_contours = show_contours
+        self.min_hsv = []
+        self.max_hsv = []
 
-        if args is not None:
-            self.min_hsv = [args.get_arg_value("h_min"), args.get_arg_value("s_min"),
-                            args.get_arg_value("v_min")]
-            self.max_hsv = [args.get_arg_value("h_max"), args.get_arg_value("s_max"),
-                            args.get_arg_value("v_max")]
+        if self.args is not None:
+            self.set_hsv_range([self.args.get_arg_value("h_min"), self.args.get_arg_value("s_min"),
+                                self.args.get_arg_value("v_min")],
+                               [self.args.get_arg_value("h_max"), self.args.get_arg_value("s_max"),
+                                self.args.get_arg_value("v_max")])
         else:
+            logger.debug(f"Creating HSVImageProcess. Args are none. Loading defaults")
             self.set_hsv_range([0, 0, 0], [255, 255, 255])
 
     def set_hsv_range(self, h_min, h_max):
-        logger.debug(f"{self.name} updated HSV values to {h_min} and {h_max}")
+        # logger.debug(f"{self.name} updated HSV values to {h_min} and {h_max}")
         self.min_hsv = numpy.array(h_min, numpy.uint8)
         self.max_hsv = numpy.array(h_max, numpy.uint8)
 
@@ -111,7 +116,7 @@ class HSVImageProcess(ImageProcess):
         self.images["main"] = cv2.erode(self.images["main"], kernel, iterations=3)
         self.images["main"] = cv2.dilate(self.images["main"], kernel, iterations=5)
         if self.images.get("sub image") is not None:
-            print("Scanning sub image")
+            # logger.debug("Scanning sub image")
             self.image_contours, test_hierarchy = cv2.findContours(
                 self.images["sub image"], cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         else:
@@ -133,3 +138,16 @@ class HSVImageProcess(ImageProcess):
 
     def update_show_contours(self, show: bool):
         self.show_contours = show
+
+    def set_args(self):
+        self.set_hsv_range(self.min_hsv, self.max_hsv)
+        if self.args is\
+                None:
+            self.args = ArgEntry(None, self.name)
+            self.args.add_arg(Arg(None, "h_min", self.min_hsv[0]))
+            self.args.add_arg(Arg(None, "s_min", self.min_hsv[1]))
+            self.args.add_arg(Arg(None, "v_min", self.min_hsv[2]))
+            self.args.add_arg(Arg(None, "h_max", self.max_hsv[0]))
+            self.args.add_arg(Arg(None, "s_max", self.max_hsv[1]))
+            self.args.add_arg(Arg(None, "v_max", self.max_hsv[2]))
+            self.args.save()

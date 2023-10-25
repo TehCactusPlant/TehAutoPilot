@@ -4,12 +4,11 @@ from abc import abstractmethod
 import cv2
 import numpy
 
-from Client.common_utils.models import Point
+from Client.common_utils.models import Point, Vector, Event
+from Client.data.bank import DataBank
 from Client.models.core_impl import *
 
 ROOT_DB = ""
-# Tuples
-NodeLink = collections.namedtuple('NodeLink', ('node1', 'node2'))
 
 
 class ContourPoints:
@@ -130,18 +129,45 @@ class Location(LocationImpl):
 
 
 class Node(NodeImpl):
-    def __init__(self, _id, location, x_off, y_off, image):
+    def __init__(self, _id, location, x_off, y_off, reference):
         super().__init__(_id)
         self.location: Location = location
-        self.reference = None
+        self.reference = reference
         self.x_off = x_off
         self.y_off = y_off
-        self.connected_nodes: list[Node] = []
-        self.position = (0, 0)
+        self.node_links: list[NodeLink] = []
+        self.position = Point(0, 0)
+        self.is_drawn = False
+        self.position_match = False
 
-    def link(self, node):
-        if node not in self.connected_nodes:
-            self.connected_nodes.append(node)
+    def link(self, node_link):
+        if node_link not in self.node_links:
+            self.node_links.append(node_link)
+
+    def update_position(self):
+        if self.reference.match is not None:
+            ref_loc = self.reference.match.center
+            self.position = Point(ref_loc.x + self.x_off, ref_loc.y + self.y_off)
+        else:
+            # Handle Assumed position
+            pass
+
+
+class NodeLink(NodeLinkImpl):
+    def __init__(self, _id, node1, node2, distance, direction):
+        super().__init__(_id)
+        self.node1: Node = node1
+        self.node2: Node = node2
+        self.dir_vector = Vector(direction, distance)
+        self.link_nodes()
+
+    def link_nodes(self):
+        self.node1.link(self)
+        self.node2.link(self)
+
+    def get_other_node(self, node):
+        conn_node = self.node1 if self.node2 == node else self.node2
+        return conn_node
 
 
 class ImageProcess(ImageProcessImpl):
@@ -183,6 +209,29 @@ class ReferenceType(ReferenceTypeImpl):
             self.name = name
 
 
+class ReferenceBuilder:
+    def __init__(self):
+        self.data_bank = DataBank()
+
+    @staticmethod
+    def assemble_by_type(ref_type_id):
+        c_type = None
+        logger.debug(f"Assembling reference from builder with ID: {ref_type_id}")
+        for t in DataBank().ref_types.get_all().values():
+            if t.get_id() == ref_type_id:
+                c_type = t
+                break
+
+        if c_type is None:
+            return None
+        elif c_type.name == "hsv contour":
+            from Client.models.matching import ContourReference
+            return ContourReference
+        elif c_type.name == "text":
+            pass
+        return None
+
+
 class Reference(ReferenceImpl):
     def __init__(self, _id, bbox=None, args=None, reference_type=None,
                  image_process=None, reference_data=None, name=None):
@@ -209,6 +258,11 @@ class Reference(ReferenceImpl):
             self.reference_data = reference_data
             self.name = name
 
+    @staticmethod
+    def assemble_by_type(type):
+        pass
+
     @abstractmethod
     def find_match(self, ref_object):
         raise NotImplemented
+

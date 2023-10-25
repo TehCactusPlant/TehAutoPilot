@@ -2,6 +2,7 @@ import logging
 import tkinter
 from tkinter import ttk
 
+from Client.data.bank import DataBank
 from Client.imaging.processing import ImageProcessor
 from Client.imaging.scanning import ImageScanner, Tracker
 from Client.models.core import Reference
@@ -25,7 +26,8 @@ class TrackingPanel(SidePanel):
         # TK Variables
         self.tracker_selection = tkinter.StringVar()
         self.active_tracker_names = tkinter.StringVar(value=[])
-        self.references = Reference.get_all()
+        self.data_bank = DataBank()
+        self.references = self.data_bank.references
         self.reference_names = []
 
         # Details table
@@ -60,8 +62,8 @@ class TrackingPanel(SidePanel):
     def load_tracker(self):
         selection = self.tracker_selection.get()
         logger.debug(f"Changing selected tracker to {selection}")
-        if selection in self.references:
-            ref = self.references[selection]
+        ref = self.references.get_variable_value(selection)
+        if ref is not None:
             tracker = Tracker(ref)
             logger.debug(f"Loading/Creating new Tracker, ref_type {tracker.image_reference.reference_type.name}")
             self.add_tracker(tracker)
@@ -112,5 +114,5 @@ class TrackingPanel(SidePanel):
         self.image_scanner.remove_tracker(tracker)
 
     def update_tracker_selections(self):
-        self.reference_names = [key for key in self.references.keys()]
+        self.reference_names = [key for key in self.references.get_all()]
         self.reference_selection_cbox["values"] = self.reference_names

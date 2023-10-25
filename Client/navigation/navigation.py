@@ -10,7 +10,7 @@ class NodeNavigator:
 
     def a_star_pathfind(self, node1: Node, dest_node: Node, paths: list[list],path: list[Node]):
         path.append(node1)
-        for con_node in node1.connected_nodes:
+        for con_node in node1.node_links:
             if con_node is dest_node:
                 # Destination reached: Return
                 path.append(dest_node)

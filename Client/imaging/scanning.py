@@ -1,7 +1,7 @@
 import cv2, logging
 import Client.common_utils.cv_drawing as drawing_utils 
 from Client.data.bank import DataBank
-from Client.common_utils.models import Event, PairedList, Point
+from Client.common_utils.models import Event, ReactiveList, Point
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ class ImageScanner:
         if self.initialized:
             return
         self.initialized = True
-        self.trackers: PairedList[Tracker] = PairedList()
+        self.trackers: ReactiveList[Tracker] = ReactiveList()
         self.current_index = 0
         self.current_num_trackers = 0
         self._trackers_to_add = []
@@ -52,9 +52,11 @@ class ImageScanner:
 
     def add_tracker(self, tracker):
         self._trackers_to_add.append(tracker)
+        logger.debug(f"Adding Tracker to be added at end of cycle. {tracker.name}")
 
     def remove_tracker(self, tracker):
         self._trackers_to_remove.append(tracker)
+        logger.debug(f"Adding Tracker to be removed at end of cycle. {tracker.name}")
 
     def get_scanner_by_name(self, name):
         for tracker in self.trackers:
@@ -85,6 +87,7 @@ class ImageScanner:
         self.data_bank.update_debug_entry("# Trackers", str(len(self.trackers)))
         if change:
             self.on_trackers_updated()
+
 
 class Tracker:
     sub_region = None

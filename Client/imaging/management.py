@@ -18,4 +18,3 @@ class ImageManager(Manager):
         for tracker in self.im_scanner.trackers:
             if tracker.matched:
                 tracker.draw_match(output_image)
-        self.im_processor.finalize_output()

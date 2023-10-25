@@ -5,7 +5,7 @@ import logging, coloredlogs
 logging.basicConfig()
 logging.root.setLevel(logging.DEBUG)
 logger = logging.getLogger(__name__)
-coloredlogs.install(logger=logger)
+coloredlogs.install(logger=logger, level=logging.DEBUG)
 
 if __name__ == "__main__":
     # Main

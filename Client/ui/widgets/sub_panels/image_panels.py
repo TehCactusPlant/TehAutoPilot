@@ -300,12 +300,12 @@ class ColorGetter(SubPanel):
 
     def draw_cross(self):
         output_image = self.image_processor.frames["main output"].get_main_image()
-        drawing_utils.draw_line(output_image,
-                                Point(0, self.y),
-                                Point(self.x_cap, self.y), util_consts.RBGColors.LIGHT_RED)
-        drawing_utils.draw_line(output_image,
-                                Point(self.x, 0),
-                                Point(self.x, self.y_cap), util_consts.RBGColors.LIGHT_RED)
+        drawing_utils.draw_line_from_points(output_image,
+                                            Point(0, self.y),
+                                            Point(self.x_cap, self.y), util_consts.RGBColors.LIGHT_RED)
+        drawing_utils.draw_line_from_points(output_image,
+                                            Point(self.x, 0),
+                                            Point(self.x, self.y_cap), util_consts.RGBColors.LIGHT_RED)
 
     def get_color(self):
         hsv_image = self.image_processor.frames["main color"].images["hsv"]

@@ -1,4 +1,6 @@
 import logging
+
+from Client.common_utils.models import Point
 from Client.database.models import DBModel
 import Client.database.core as core_db
 
@@ -119,6 +121,16 @@ class LocationImpl(DBModel):
         statement = f"SELECT * FROM {self.table_name} WHERE _id = {self.get_id()}"
         return core_db.execute_query(self.db_host, statement)
 
+    @staticmethod
+    def get_all():
+        statement = f"SELECT _id FROM location"
+        resp = core_db.execute_query(ROOT_DB, statement)
+        from Client.models.core import Location
+        locations = []
+        for row in resp:
+            locations.append(Location(row["_id"]))
+        return locations
+
 
 class NodeImpl(DBModel):
     def __init__(self, _id):
@@ -133,16 +145,69 @@ class NodeImpl(DBModel):
 
     def save(self):
         self.reference.save()
+        self.location.save()
         l_id = self.location.get_id() if self.location is not None else None
         statement = f"INSERT OR REPLACE INTO {self.table_name} " \
                     + f"(_id, location, x_off, y_off, reference) VALUES(?,?,?,?,?) RETURNING *"
         args = (self.get_id(), l_id, self.x_off, self.y_off, self.reference.get_id())
         resp = core_db.execute_query(self.db_host, statement, args)
         self.new_id_from_db(resp)
+        print(f"New ID for node: {self.get_id()}")
 
+    def get(self):
+        statement = f"SELECT * FROM node WHERE _id = {self.get_id()}"
+        resp = core_db.execute_query(self.db_host, statement)
+        if len(resp) > 0:
+            return resp[0]
+
+    @staticmethod
+    def get_all_in_location(location):
+        statement = f"SELECT * FROM node WHERE location = {location.get_id()}"
+        resp = core_db.execute_query(ROOT_DB, statement)
+        nodes = {}
+        from Client.models.core import ReferenceBuilder
+        from Client.models.core import Node
+        for row in resp:
+            ref_class = ReferenceBuilder.assemble_by_type(row["reference_type"])
+            if ref_class is not None:
+                ref = ref_class(row["image_reference"])
+                nodes[row["_id"]] = Node(row["_id"], location, row["x_off"], row["y_off"], ref)
+        return nodes
+
+
+class NodeLinkImpl(DBModel):
+    def __init__(self, _id):
+        super().__init__(_id, ROOT_DB, "node_link")
+        self.node1 = None
+        self.node2 = None
+        self.dir_vector = None
+
+    def delete(self):
+        pass
+
+    def save(self):
+        statement = "INSERT OR IGNORE INTO node_link (node1, node2, distance, direction) VALUES(?,?,?,?)"
+        args = (self.node1.get_id(), self.node2.get_id(), self.dir_vector.direction, self.dir_vector.magnitude)
+        resp = core_db.execute_query(self.db_host, statement, args)
+        return resp
 
     def get(self):
         pass
+
+    @staticmethod
+    def get_multiple(node_ids):
+        nodes_ids = tuple(node_ids)
+        statement = f"SELECT * FROM node_link WHERE node1 IN {node_ids} OR node2 in {node_ids}"
+        resp = core_db.execute_query(ROOT_DB, statement)
+        links = []
+        for row in resp:
+            from Client.models.core import NodeLink
+            from Client.navigation.nodes import NodeMapping
+            mapper = NodeMapping()
+            node1 = mapper.loaded_nodes(row["node1"])
+            node2 = mapper.loaded_nodes(row["node2"])
+            links.append(NodeLink(None, node1, node2, row["distance"], row["direction"]))
+        return links
 
 
 class TaskImpl(DBModel):
@@ -195,6 +260,16 @@ class ReferenceTypeImpl(DBModel):
         statement = f"SELECT * FROM {self.table_name} WHERE reference_type_name = '{self.name}'"
         return core_db.execute_query(self.db_host, statement)
 
+    @staticmethod
+    def get_all():
+        statement = "SELECT * FROM reference_type"
+        resp = core_db.execute_query(ROOT_DB, statement)
+        types = []
+        for row in resp:
+            from Client.models.core import ReferenceType
+            types.append(ReferenceType(row["_id"]))
+        return types
+
 
 class ReferenceImpl(DBModel):
     def __init__(self, _id):
@@ -227,23 +302,14 @@ class ReferenceImpl(DBModel):
 
     @staticmethod
     def get_all() -> dict:
-        statement = f"SELECT * FROM reference"
+        statement = f"SELECT _id, name, reference_type FROM reference"
         data = core_db.execute_query(ROOT_DB, statement)
-        resp = {}
-        types = core_db.execute_query(ROOT_DB, "SELECT * FROM reference_type")
-        for entry in data:
-            r_type = None
-            for row in types:
-                if row["_id"] == entry["reference_type"]:
-                    r_type = row["reference_type_name"]
-                    break
-            if r_type == "hsv contour":
-                from Client.models.matching import ContourReference
-                resp[entry["name"]] = ContourReference(entry["_id"])
-            else:
-                from Client.models.core import Reference
-                resp[entry["name"]] = Reference(entry["_id"])
-        return resp
+        references = []
+        from Client.models.core import ReferenceBuilder
+        for row in data:
+            r_class = ReferenceBuilder.assemble_by_type(row["reference_type"])
+            references.append(r_class(row["_id"]))
+        return references
 
     def get(self):
         statement = f"SELECT * FROM {self.table_name} WHERE _id = {self.get_id()}"

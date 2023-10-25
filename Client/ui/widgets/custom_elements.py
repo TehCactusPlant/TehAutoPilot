@@ -1,7 +1,7 @@
 import tkinter
 from tkinter import ttk
 
-from Client.common_utils.models import Event, PairedList
+from Client.common_utils.models import Event, ReactiveList
 
 
 class Table(ttk.Treeview):
@@ -24,7 +24,7 @@ class Table(ttk.Treeview):
 
 
 class ObjectTable(ttk.Treeview):
-    def __init__(self,parent, mapping: dict[str: str], p_list: PairedList, *args, **kwargs):
+    def __init__(self, parent, mapping: dict[str: str], p_list: ReactiveList, *args, **kwargs):
 
         super().__init__(parent, columns=list(mapping.values()), selectmode="browse", show='headings', *args, **kwargs)
         self.objects = p_list
@@ -45,6 +45,7 @@ class ObjectTable(ttk.Treeview):
         self.objects.on_added_item += self.add_row
         self.objects.on_removed_item += self.remove_row
         self.objects.on_entry_changed += self.update_row
+        self.objects.on_list_cleared += self.reset_table_data
 
         # Finalize Init
         self.reset_table_data()

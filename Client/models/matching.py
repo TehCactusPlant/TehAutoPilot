@@ -1,12 +1,12 @@
 import cv2
 
-from Client.common_utils import cv_drawing
+import Client.common_utils.cv_drawing as drawing_utils
+from Client.data.bank import DataBank
 from Client.models.core import Reference, ContourPoints, BBox
 from Client.common_utils.models import Point
 
 
 class ContourReference(Reference):
-
     def __init__(self, _id, bbox=None, args=None, reference_type=None,
                  image_process=None, reference_data = None, name = None):
         super().__init__(_id, bbox, args, reference_type, image_process, reference_data, name)
@@ -21,6 +21,7 @@ class ContourReference(Reference):
         self.match = None
 
     def find_match(self, contour_to_search):
+        self.match = None
         if self.contour_points is None:
             return None, 99
         if contour_to_search is None:
@@ -40,14 +41,15 @@ class ContourReference(Reference):
                         matches = [cnt_point_dynamic]
             if len(matches) > 0:
                 x,y,w,h = cv2.boundingRect(self.contour_points.contours)
-                self.minBox = BBox(None, x,y,w,h)
+                self.minBox = BBox(None, x, y, w, h)
+                self.match = matches[0]
                 return matches[0], max_match
         self.minBox = None
         return None, 1
 
     def draw_match(self, output_image):
         if self.reference_type == 'hsv contour':
-            opencv_utils.draw_contour_parameter(output_image, self.match)
-            opencv_utils.draw_contour_points(output_image, self.match)
-            opencv_utils.write_label(output_image, self.match.center, f"{self.match.name} %.5f" % self.match_val)
+            drawing_utils.draw_contour_parameter(output_image, self.match)
+            drawing_utils.draw_contour_points(output_image, self.match)
+            drawing_utils.write_label(output_image, self.match.center, f"{self.match.name} %.5f" % self.match_val)
 

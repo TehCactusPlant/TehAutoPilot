@@ -106,8 +106,8 @@ class DBInterface:
                    foreign_key=ForeignKey("location", "_id")),
             Column("x_off", ColumnType.INTEGER),
             Column("y_off", ColumnType.INTEGER),
-            Column("image_reference", ColumnType.INTEGER,
-                   foreign_key=ForeignKey("image_reference", "_id")),
+            Column("reference", ColumnType.INTEGER,
+                   foreign_key=ForeignKey("reference", "_id")),
         ]))
 
         tables.append(Table("node_link", [
@@ -115,7 +115,8 @@ class DBInterface:
                    foreign_key=ForeignKey("node", "_id")),
             Column("node2", ColumnType.INTEGER, co_unique=True,
                    foreign_key=ForeignKey("node", "_id")),
-            Column("distance", ColumnType.INTEGER)
+            Column("distance", ColumnType.INTEGER),
+            Column("direction", ColumnType.REAL)
         ]))
 
         tables.append(Table("task_step_link", [
@@ -165,9 +166,22 @@ def object_tests():
 
     preset_name = "Blue Door"
     im_proc: ImageProcess = ImageProcess(None, preset_name, None)
-    im_proc.args = ArgEntry(None, "test args")
+    im_proc.args = ArgEntry(None, "Blue Door")
     int_hsv_min = (81,127,130)
     int_hsv_max = (112,255,255)
+    im_proc.args.add_arg(Arg(None, "h_min", int_hsv_min[0]))
+    im_proc.args.add_arg(Arg(None, "s_min", int_hsv_min[1]))
+    im_proc.args.add_arg(Arg(None, "v_min", int_hsv_min[2]))
+    im_proc.args.add_arg(Arg(None, "h_max", int_hsv_max[0]))
+    im_proc.args.add_arg(Arg(None, "s_max", int_hsv_max[1]))
+    im_proc.args.add_arg(Arg(None, "v_max", int_hsv_max[2]))
+    im_proc.save()
+
+    preset_name = "Brown Door"
+    im_proc: ImageProcess = ImageProcess(None, preset_name, None)
+    im_proc.args = ArgEntry(None, "Brown Door")
+    int_hsv_min = (10, 53, 81)
+    int_hsv_max = (22, 53, 209)
     im_proc.args.add_arg(Arg(None, "h_min", int_hsv_min[0]))
     im_proc.args.add_arg(Arg(None, "s_min", int_hsv_min[1]))
     im_proc.args.add_arg(Arg(None, "v_min", int_hsv_min[2]))

@@ -56,7 +56,7 @@ class SwitchProPiControllerRelay(Controller):
         conn_thread.start()
         self.local_controller = SwitchPacketAssembler(self.DELAY)
         while True:
-            sleep(self.DELAY)  # SHIT GOIN' TO FAST
+            sleep(self.DELAY) 
             self.process_packet()
 
     def process_packet(self):

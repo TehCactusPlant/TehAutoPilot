@@ -1,4 +1,5 @@
-# TehAutoPilot
+# TehAutoPilot <Under Development>
+> Current Version: 0.0.1 (unreleased)
 
 ### Summary
 Application to automate a variety of processes such as desktop UIs, video games and more.

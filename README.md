@@ -27,5 +27,5 @@ negative responses that execute other steps and even tasks recursively.
 
 For video games a node based navigation system is implemented. Tracking the position of X(example player) moving towards nodes mapped based on image / shape object references.
 
-[Example](https://github.com/TehCactusPlant/TehAutoPilot/tree/main/Concepts/Node%20Navigation%201.png)
+[Node Plotting Example](https://github.com/TehCactusPlant/TehAutoPilot/tree/main/Concepts/Node%20Navigation%201.png)
 > Documentation to be uploaded  on initial version release.

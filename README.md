@@ -3,11 +3,12 @@
 ### Summary
 Application to automate a variety of processes such as desktop UIs, video games and more.
 
-### Concept
-
+## Concept
+### Base designs
 [Flowchart for High Level Overview](https://github.com/TehCactusPlant/TehAutoPilot/tree/main/Concepts/AutoPilot%20HighLevelConcept.png)  
 [Flowchart for Database Mapping](https://github.com/TehCactusPlant/TehAutoPilot/tree/main/Concepts/AutoPilot%20DB%20Plan.png)
 
+### General Breakdown
 Application uses Computer Vision / opencv to track simple shapes assembled through thresholding various color ranges. 
 These tracked objects are used as reference points for automation logic.
 

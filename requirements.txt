@@ -2,3 +2,4 @@
 websockets==11.0.3
 XInput-Python==0.4.0
 xinput==0.1.3
+eventables
